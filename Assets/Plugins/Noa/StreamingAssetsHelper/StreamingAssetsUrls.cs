@@ -6,10 +6,18 @@ using System.Text;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+#endif
 
 namespace Noa
 {
     internal sealed class StreamingAssetsUrl
+#if UNITY_EDITOR
+        : IPreprocessBuildWithReport
+#endif
     {
         private const string INFO_TXT = "StreamingAssetsUrl.txt";
         private const int Offset = 5;
@@ -158,6 +166,19 @@ namespace Noa
         private static byte[] Compress(byte[] bytes)
         {
             return bytes;
+        }
+
+        /// <summary>
+        /// 一番最後に実行する
+        /// </summary>
+        public int callbackOrder { get { return int.MaxValue; } }
+
+        /// <summary>
+        /// ビルドする前に実行される
+        /// </summary>
+        public void OnPreprocessBuild(BuildReport report)
+        {
+            Write();
         }
 #endif
     }
