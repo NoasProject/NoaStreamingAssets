@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Collections;
@@ -11,7 +12,7 @@ namespace Noa
     internal sealed class StreamingAssetsUrl
     {
         private const string INFO_TXT = "StreamingAssetsUrl.txt";
-        private const int Offset = 0;
+        private const int Offset = 5;
         private const char Separator = '\n';
 
         /// <summary>
@@ -21,43 +22,62 @@ namespace Noa
         {
             string infoTxtPath = Path.Combine(Application.streamingAssetsPath, INFO_TXT);
 
-            string infoTxtdata = string.Empty;
+            string infoTxt = string.Empty;
 
             // 読み込む
             var reqest = UnityWebRequest.Get(infoTxtPath);
 
             yield return reqest.SendWebRequest();
 
-            Debug.Log(reqest.error);
-
-            if (string.IsNullOrEmpty(reqest.error))
+            if (!reqest.isNetworkError && string.IsNullOrEmpty(reqest.error))
             {
                 byte[] encInfoData = reqest.downloadHandler.data;
 
-                int dataSize = encInfoData.Length;
+                byte[] decomp = Decompress(encInfoData);
 
-                byte[] decInfoData = new byte[dataSize];
+                byte[] decInfoData = OffSetBytes(decomp, Offset);
 
-                // 複合化を行う
-                if (dataSize > 0)
-                {
-                    for (int i = 0; i < dataSize; i++)
-                    {
-                        int idx = (i - Offset) % dataSize;
-                        decInfoData[idx] = encInfoData[i];
-                    }
-                }
+                infoTxt = Encoding.UTF8.GetString(decInfoData);
 
-                infoTxtdata = Encoding.UTF8.GetString(decInfoData);
+                Debug.Log($"Offset: {Offset}, decSize: {decInfoData.Length}, TxtLength: {infoTxt.Length}\n" + infoTxt);
             }
 
             // 配列に変換を行う
-            string[] infos = infoTxtdata.Split(Separator);
+            string[] infos = infoTxt.Split(Separator);
 
             if (callback != null)
             {
                 callback(infos);
             }
+        }
+
+        private static byte[] OffSetBytes(byte[] bytes, int offset)
+        {
+            int dataSize = bytes.Length;
+
+            byte[] decInfoData = new byte[dataSize];
+
+            // 複合化を行う
+            if (dataSize > 0)
+            {
+                for (int i = 0; i < dataSize; i++)
+                {
+                    int idx = (i + offset + dataSize) % dataSize;
+                    decInfoData[idx] = bytes[i];
+                }
+            }
+
+            return decInfoData;
+        }
+
+        /// <summary>
+        /// 解凍
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        private static byte[] Decompress(byte[] bytes)
+        {
+            return bytes;
         }
 
 #if UNITY_EDITOR
@@ -71,6 +91,9 @@ namespace Noa
                 .Where(w => Path.GetExtension(w) != ".meta")
                 // 自分のTextファイルを除く
                 .Where(w => Path.GetFileName(w) != INFO_TXT)
+                .Where(w => (File.GetAttributes(w) & FileAttributes.Hidden) != FileAttributes.Hidden)
+                .Select(s => s.Replace(Application.streamingAssetsPath + "/", string.Empty))
+                .OrderBy(o => o)
                 .ToArray();
 
             // Txtファイルへ変換を行う
@@ -85,22 +108,16 @@ namespace Noa
 
             int dataSize = decInfoData.Length;
 
-            // 暗号化を行った場合のTxtファイル
-            byte[] encInfoData = new byte[dataSize];
+            // 圧縮を行う
+            byte[] compInfoData = Compress(decInfoData);
 
-            // 暗号化を行う
-            if (dataSize > 0)
-            {
-                for (int i = 0; i < dataSize; i++)
-                {
-                    int idx = (i + Offset) % dataSize;
-                    decInfoData[idx] = encInfoData[i];
-                }
-            }
+            // 暗号化を行った場合のTxtファイル
+            byte[] encInfoData = OffSetBytes(compInfoData, -1 * Offset);
 
             // テキストファイルの内容をログへ出力する
-            Debug.Log($"FileNum: {infos.Length}, Offset: {Offset}, byteSize: {dataSize} -> encSize: {encInfoData.Length}, TxtLength: {txt.Length}\n" + txt);
+            Debug.Log($"FileNum: {infos.Length}, Offset: {Offset}, DataSize: {dataSize} -> compSize: {encInfoData.Length}, TxtLength: {txt.Length}\n" + txt);
 
+            Debug.Log("複合化テスト\n" + Encoding.UTF8.GetString(OffSetBytes(Decompress(encInfoData), Offset)));
             // 保存パス
             string txtPath = Path.Combine(Application.streamingAssetsPath, INFO_TXT);
 
@@ -131,6 +148,16 @@ namespace Noa
                 Debug.LogException(e);
                 throw e;
             }
+        }
+
+        /// <summary>
+        /// 圧縮
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        private static byte[] Compress(byte[] bytes)
+        {
+            return bytes;
         }
 #endif
     }

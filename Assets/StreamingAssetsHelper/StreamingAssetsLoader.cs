@@ -17,7 +17,12 @@ namespace Noa
         /// <summary>
         /// Assetの一覧を格納する
         /// </summary>
-        public string[] mUrls;
+        private string[] mUrls;
+
+        /// <summary>
+        /// 初期化完了フラグ
+        /// </summary>
+        private bool mIsInitialize = false;
 
         /// <summary>
         /// 初期化処理
@@ -25,17 +30,28 @@ namespace Noa
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InitializeLoad()
         {
-            GameObject go = new GameObject(typeof(StreamingAssetsLoader).FullName);
-            ins = go.AddComponent<StreamingAssetsLoader>();
-
             if (IsHelper)
             {
+                // シーン上にGameObjectを生成する
+                GameObject go = new GameObject(typeof(StreamingAssetsLoader).FullName);
+                DontDestroyOnLoad(go);
+                ins = go.AddComponent<StreamingAssetsLoader>();
+
                 ins.StartCoroutine(StreamingAssetsUrl.Read(infos =>
                 {
-                    Debug.Log(string.Join("\n", infos));
-                    ins.mUrls = infos;
-                }));
+                    // Nullの場合は初期化を行う
+                    if (infos == null)
+                        infos = new string[0];
 
+                    Debug.Log(string.Join("\n", infos));
+
+                    ins.mUrls = infos;
+                    ins.mIsInitialize = true;
+                }));
+            }
+            else
+            {
+                ins.mIsInitialize = true;
             }
         }
 
@@ -46,7 +62,7 @@ namespace Noa
         {
             get
             {
-                if (ins != null)
+                if (ins != null && ins.mIsInitialize)
                 {
                     return true;
                 }
@@ -55,6 +71,9 @@ namespace Noa
             }
         }
 
+        /// <summary>
+        /// StreamingAssetsに含まれるファイル一覧
+        /// </summary>
         public static string[] Urls
         {
             get
@@ -196,10 +215,24 @@ namespace Noa
         {
             if (IsHelper)
             {
+                int length = ins.mUrls.Length;
+                for (int i = 0; i < length; i++)
+                {
+                    string url = ins.mUrls[i];
+
+                    // ディレクトリ判定のため、Indexは必ず0を差す
+                    if (url.IndexOf(path) == 0)
+                    {
+                        return true;
+                    }
+                }
+
                 return false;
             }
-
-            return System.IO.Directory.Exists(path);
+            else
+            {
+                return System.IO.Directory.Exists(path);
+            }
         }
 
 
