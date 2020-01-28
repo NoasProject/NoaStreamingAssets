@@ -3,4 +3,4 @@
 記載中〜
 
 ## Package
-[Package](Assets/Plugins/Noa/StreamingAssets/.Package/NoaStreamingAssets.unitypackage?raw=true)<br>
+[Package](Assets/Plugins/Noa/StreamingAssetsHelper/.Package/NoaStreamingAssets.unitypackage?raw=true)<br>
