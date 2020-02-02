@@ -30,13 +30,13 @@ namespace Noa
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InitializeLoad()
         {
+            // シーン上にGameObjectを生成する
+            GameObject go = new GameObject(typeof(StreamingAssetsLoader).FullName);
+            DontDestroyOnLoad(go);
+            ins = go.AddComponent<StreamingAssetsLoader>();
+
             if (IsHelper)
             {
-                // シーン上にGameObjectを生成する
-                GameObject go = new GameObject(typeof(StreamingAssetsLoader).FullName);
-                DontDestroyOnLoad(go);
-                ins = go.AddComponent<StreamingAssetsLoader>();
-
                 ins.StartCoroutine(StreamingAssetsUrl.Read(infos =>
                 {
                     // Nullの場合は初期化を行う
@@ -235,6 +235,22 @@ namespace Noa
             }
         }
 
+        /// <summary>
+        /// このインスタンスの削除を行う
+        /// </summary>
+        public static void Destroy()
+        {
+            if (ins != null)
+            {
+                // 全ての動作を停止させる
+                ins.StopAllCoroutines();
 
+                // GameObjectを削除する
+                GameObject.Destroy(ins.gameObject);
+
+                // Instanceの参照を外す
+                ins = null;
+            }
+        }
     }
 }

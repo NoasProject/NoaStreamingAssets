@@ -21,7 +21,7 @@ namespace Noa
     {
         private const string INFO_TXT = "StreamingAssetsUrl.txt";
         private const int Offset = 5;
-        private const char Separator = '\n';
+        private static char Separator { get { return Convert.ToChar(Environment.NewLine); } }
 
         /// <summary>
         /// StreamingAssetsに含まれているファイルを読み込む
@@ -100,7 +100,7 @@ namespace Noa
                 // 自分のTextファイルを除く
                 .Where(w => Path.GetFileName(w) != INFO_TXT)
                 .Where(w => (File.GetAttributes(w) & FileAttributes.Hidden) != FileAttributes.Hidden)
-                .Select(s => s.Replace(Application.streamingAssetsPath + "/", string.Empty))
+                .Select(s => s.Replace(Application.streamingAssetsPath + Path.DirectorySeparatorChar.ToString(), string.Empty))
                 .OrderBy(o => o)
                 .ToArray();
 
@@ -179,6 +179,8 @@ namespace Noa
         public void OnPreprocessBuild(BuildReport report)
         {
             Write();
+
+            AssetDatabase.Refresh();
         }
 #endif
     }
