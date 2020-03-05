@@ -21,7 +21,7 @@ namespace Noa
     {
         private const string INFO_TXT = "StreamingAssetsUrl.txt";
         private const int Offset = 5;
-        private static char Separator { get { return Convert.ToChar(Environment.NewLine); } }
+        private static char Separator { get { return '\n'; } }
 
         /// <summary>
         /// StreamingAssetsに含まれているファイルを読み込む

@@ -25,6 +25,11 @@ namespace Noa
         private bool mIsInitialize = false;
 
         /// <summary>
+        /// タイムアウトの時間
+        /// </summary>
+        private const float timeOut = 5f;
+
+        /// <summary>
         /// 初期化処理
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -128,30 +133,64 @@ namespace Noa
             return false;
         }
 
-        public static IEnumerator ReadAllBytes(string path, Action<byte[]> callback)
+        public static Coroutine ReadAllBytes(string path, Action<byte[]> callback)
+        {
+            IEnumerator ie = IEReadAllBytes(path, callback);
+
+            if (ins != null)
+            {
+                return ins.StartCoroutine(ie);
+            }
+
+            Debug.LogError("[Noa.StreamingAssetsLoader] Corouitine Start Error.");
+            return null;
+        }
+
+        public static IEnumerator IEReadAllBytes(string path, Action<byte[]> callback)
         {
             // ファイルのByteサイズ
             byte[] bytes = null;
 
-            // ファイルがIOで読み込めない場合の処理
-            if (IsHelper)
+            // 経過時間
+            float _time = 0;
+
+            // 初期化がされていない場合
+            while (!IsInitialize)
             {
-                var reqest = UnityEngine.Networking.UnityWebRequest.Get(path);
+                // 時間を超過した場合, ループを抜ける
+                if (_time > timeOut)
+                    break;
 
-                yield return reqest.SendWebRequest();
+                // 1フレームの時間を確認する
+                _time += Time.deltaTime;
 
-                if (string.IsNullOrEmpty(reqest.error))
-                {
-                    bytes = reqest.downloadHandler.data;
-                }
+                yield return null;
             }
 
-            // IOで読み込みが可能な場合
-            else
+            // 初期化が成功している場合
+            if (IsInitialize)
             {
-                if (File.Exists(path))
+                // ファイルがIOで読み込めない場合の処理
+                if (IsHelper)
                 {
-                    bytes = File.ReadAllBytes(path);
+
+                    var reqest = UnityEngine.Networking.UnityWebRequest.Get(path);
+
+                    yield return reqest.SendWebRequest();
+
+                    if (string.IsNullOrEmpty(reqest.error))
+                    {
+                        bytes = reqest.downloadHandler.data;
+                    }
+                }
+
+                // IOで読み込みが可能な場合
+                else
+                {
+                    if (File.Exists(path))
+                    {
+                        bytes = File.ReadAllBytes(path);
+                    }
                 }
             }
 
